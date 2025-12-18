@@ -259,15 +259,14 @@
     // ============================================
     // FIREBASE CONFIGURATION
     // ============================================
-    // Replace with your Firebase config from Firebase Console
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyARoru9_NB-VyJd-igQF7nCcSUnppdR7m0",
+      authDomain: "bayanbilling.firebaseapp.com",
+      databaseURL: "https://bayanbilling-default-rtdb.firebaseio.com",
+      projectId: "bayanbilling",
+      storageBucket: "bayanbilling.firebasestorage.app",
+      messagingSenderId: "361558314512",
+      appId: "1:361558314512:web:d732900034f952d90b4495"
     };
 
     // Initialize Firebase
@@ -334,22 +333,29 @@
         if (record.id && record.id.startsWith('temp_')) {
           // New record
           const newRef = database.ref('records').push();
-          const newId = newRef.key;
           const recordWithoutId = { ...record };
           delete recordWithoutId.id;
           await newRef.set(recordWithoutId);
+          updateSyncStatus('synced');
+          return true;
         } else if (record.id) {
           // Update existing
           const recordWithoutId = { ...record };
           delete recordWithoutId.id;
           await database.ref(`records/${record.id}`).set(recordWithoutId);
+          updateSyncStatus('synced');
+          return true;
+        } else {
+          // No ID provided, create new
+          const newRef = database.ref('records').push();
+          await newRef.set(record);
+          updateSyncStatus('synced');
+          return true;
         }
-        updateSyncStatus('synced');
-        return true;
       } catch (error) {
         console.error('Firebase save error:', error);
         updateSyncStatus('error');
-        showToast('Sync error. Check connection.', 'error');
+        showToast('Check Firebase config & connection', 'error');
         return false;
       }
     }
@@ -1432,5 +1438,5 @@
     // ============================================
     init();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b00237426f43989',t:'MTc2NjA3NjQwOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b008539e1996091',t:'MTc2NjA4MDQxNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
