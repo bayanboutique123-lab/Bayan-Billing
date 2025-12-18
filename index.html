@@ -14,11 +14,23 @@
     console.warn = (function(originalWarn) {
       return function(...args) {
         if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) {
-          return; // Suppress Tailwind CDN warning
+          return;
         }
         originalWarn.apply(console, args);
       };
     })(console.warn);
+    
+    // Suppress 404 errors from Canva platform SDK attempts
+    const originalError = console.error;
+    console.error = function(...args) {
+      const errorStr = args.join(' ');
+      if (errorStr.includes('element_sdk.js') || 
+          errorStr.includes('data_sdk.js') || 
+          errorStr.includes('cdn-cgi')) {
+        return;
+      }
+      originalError.apply(console, args);
+    };
   </script>
   <style>
     body {
@@ -78,6 +90,1371 @@
   <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
   <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
  </head>
- <body class="h-full">
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b00a2bdb33547d5',t:'MTc2NjA4MTYyMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <body class="h-full"><!-- Login Screen -->
+  <div id="login-screen" class="h-full w-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 p-4">
+   <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+    <div class="text-center mb-6">
+     <div class="text-6xl mb-4">
+      🔐
+     </div>
+     <h1 class="text-2xl font-bold text-gray-900 mb-1">Bayan Boutique</h1>
+     <p class="text-sm text-gray-600">Mobile Billing System</p>
+    </div>
+    <form id="login-form" class="space-y-4">
+     <div><label for="passcode-input" class="block text-sm font-medium text-gray-700 mb-2">Enter Passcode</label> <input type="password" id="passcode-input" required autofocus inputmode="numeric" pattern="[0-9]*" class="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-center text-2xl tracking-widest" placeholder="••••">
+     </div>
+     <div id="login-error" class="hidden bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm text-center">
+     </div><button type="submit" id="login-btn" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-semibold hover:bg-indigo-700 transition text-lg shadow-lg active:scale-95"> 🔓 Unlock </button>
+    </form>
+    <div class="mt-6 text-center text-xs text-gray-500">
+     <p>Default: <span class="font-mono font-semibold">1234</span></p>
+     <p class="mt-2 flex items-center justify-center gap-1"><span class="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> <span>Firebase Connected</span></p>
+    </div>
+   </div>
+  </div>
+  <div id="app" class="h-full w-full flex flex-col bg-gray-50 hidden"><!-- Top Header -->
+   <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg">
+    <div class="flex justify-between items-center">
+     <div>
+      <h1 class="text-xl font-bold">Bayan Boutique</h1>
+      <p class="text-xs opacity-90">Kakkad, Kannur</p>
+     </div>
+     <div class="flex items-center gap-2">
+      <div id="sync-status" class="flex items-center gap-1 text-xs bg-white bg-opacity-20 px-3 py-1 rounded-full"><span class="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> <span>Synced</span>
+      </div>
+     </div>
+    </div>
+   </div><!-- Main Content Area -->
+   <div class="flex-1 overflow-y-auto pb-20"><!-- Billing Section -->
+    <div id="billing-section" class="tab-content p-4 space-y-4">
+     <div class="bg-white rounded-2xl shadow-md p-4">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><span>💰</span> New Invoice</h2>
+      <form id="invoice-form" class="space-y-3">
+       <div><label for="customer-name" class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label> <input type="text" id="customer-name" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+       </div>
+       <div><label for="order-number" class="block text-sm font-medium text-gray-700 mb-1">Order Number</label> <input type="text" id="order-number" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+       </div>
+       <div class="grid grid-cols-2 gap-3">
+        <div><label for="sale-type" class="block text-sm font-medium text-gray-700 mb-1">Type</label> <select id="sale-type" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"> <option value="cash">Cash</option> <option value="credit">Credit</option> </select>
+        </div>
+        <div><label for="invoice-date" class="block text-sm font-medium text-gray-700 mb-1">Date</label> <input type="date" id="invoice-date" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+       </div>
+       <div class="grid grid-cols-2 gap-3">
+        <div><label for="product-cost" class="block text-sm font-medium text-gray-700 mb-1">Cost</label> <input type="number" id="product-cost" step="0.01" required inputmode="decimal" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+        <div><label for="sale-amount" class="block text-sm font-medium text-gray-700 mb-1">Sale</label> <input type="number" id="sale-amount" step="0.01" required inputmode="decimal" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+       </div><!-- Dispatch Section -->
+       <div class="border-t-2 border-gray-100 pt-3"><label class="flex items-center gap-2 mb-3"> <input type="checkbox" id="is-dispatched" class="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"> <span class="text-sm font-medium text-gray-700">📦 Item Dispatched</span> </label>
+        <div id="dispatch-fields" class="space-y-3 hidden">
+         <div><label for="dispatch-date" class="block text-sm font-medium text-gray-700 mb-1">Dispatch Date</label> <input type="date" id="dispatch-date" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+         </div>
+         <div><label for="courier-service" class="block text-sm font-medium text-gray-700 mb-1">Courier Service</label> <select id="courier-service" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"> <option value="">-- Select --</option> <option value="DTDC Courier">DTDC</option> <option value="Indian Post">Indian Post</option> <option value="Speed and Safe">Speed &amp; Safe</option> <option value="Transport">Transport</option> </select>
+         </div>
+         <div><label for="barcode-number" class="block text-sm font-medium text-gray-700 mb-1">Tracking Number</label> <input type="text" id="barcode-number" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+         </div>
+        </div>
+       </div><button type="submit" id="invoice-submit-btn" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg active:scale-95 flex items-center justify-center gap-2"> <span>Create Invoice</span> </button>
+      </form>
+     </div><!-- Recent Invoices -->
+     <div class="bg-white rounded-2xl shadow-md p-4">
+      <h3 class="text-lg font-bold text-gray-800 mb-3">Recent Invoices</h3>
+      <div id="invoice-list" class="space-y-3"></div>
+     </div>
+    </div><!-- Receipts Section -->
+    <div id="receipts-section" class="tab-content hidden p-4 space-y-4">
+     <div class="bg-white rounded-2xl shadow-md p-4">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><span>📝</span> New Receipt</h2>
+      <form id="receipt-form" class="space-y-3">
+       <div><label for="receipt-customer-select" class="block text-sm font-medium text-gray-700 mb-1">Customer</label> <select id="receipt-customer-select" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"> <option value="">-- Select --</option> </select>
+       </div>
+       <div><label for="receipt-invoice-select" class="block text-sm font-medium text-gray-700 mb-1">Link Invoice (Optional)</label> <select id="receipt-invoice-select" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"> <option value="">-- Select --</option> </select>
+       </div>
+       <div class="grid grid-cols-2 gap-3">
+        <div><label for="receipt-date" class="block text-sm font-medium text-gray-700 mb-1">Date</label> <input type="date" id="receipt-date" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+        <div><label for="receipt-amount" class="block text-sm font-medium text-gray-700 mb-1">Amount</label> <input type="number" id="receipt-amount" step="0.01" required inputmode="decimal" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+       </div>
+       <div><label for="receipt-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label> <input type="text" id="receipt-description" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+       </div><button type="submit" id="receipt-submit-btn" class="w-full bg-green-600 text-white py-4 rounded-xl font-semibold hover:bg-green-700 transition shadow-lg active:scale-95"> Record Receipt </button>
+      </form>
+     </div>
+     <div class="bg-white rounded-2xl shadow-md p-4">
+      <h3 class="text-lg font-bold text-gray-800 mb-3">Recent Receipts</h3>
+      <div id="receipt-list" class="space-y-3"></div>
+     </div>
+    </div><!-- Expenses Section -->
+    <div id="expenses-section" class="tab-content hidden p-4 space-y-4">
+     <div class="bg-white rounded-2xl shadow-md p-4">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><span>💸</span> New Expense</h2>
+      <form id="expense-form" class="space-y-3">
+       <div><label for="expense-type" class="block text-sm font-medium text-gray-700 mb-1">Expense Type</label> <input type="text" id="expense-type" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+       </div>
+       <div class="grid grid-cols-2 gap-3">
+        <div><label for="expense-date" class="block text-sm font-medium text-gray-700 mb-1">Date</label> <input type="date" id="expense-date" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+        <div><label for="expense-amount" class="block text-sm font-medium text-gray-700 mb-1">Amount</label> <input type="number" id="expense-amount" step="0.01" required inputmode="decimal" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+       </div>
+       <div><label for="expense-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label> <input type="text" id="expense-description" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+       </div><button type="submit" id="expense-submit-btn" class="w-full bg-red-600 text-white py-4 rounded-xl font-semibold hover:bg-red-700 transition shadow-lg active:scale-95"> Record Expense </button>
+      </form>
+     </div>
+     <div class="bg-white rounded-2xl shadow-md p-4">
+      <h3 class="text-lg font-bold text-gray-800 mb-3">Recent Expenses</h3>
+      <div id="expense-list" class="space-y-3"></div>
+     </div>
+    </div><!-- Reports Section -->
+    <div id="reports-section" class="tab-content hidden p-4 space-y-4">
+     <div class="grid grid-cols-1 gap-4">
+      <div class="bg-white rounded-2xl shadow-md p-4">
+       <h3 class="text-lg font-bold text-gray-800 mb-3">📊 Sales Report</h3>
+       <div class="space-y-3"><input type="month" id="sales-month" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"> <button id="sales-report-btn" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition active:scale-95"> Generate </button>
+       </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-md p-4">
+       <h3 class="text-lg font-bold text-gray-800 mb-3">💸 Expenses Report</h3>
+       <div class="space-y-3"><input type="month" id="expense-month" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"> <button id="expense-report-btn" class="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition active:scale-95"> Generate </button>
+       </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-md p-4">
+       <h3 class="text-lg font-bold text-gray-800 mb-3">💳 Credit Report</h3>
+       <div class="space-y-3"><select id="customer-select" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"> <option value="">-- Select Customer --</option> </select> <button id="credit-report-btn" class="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition active:scale-95"> Generate </button>
+       </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-md p-4">
+       <h3 class="text-lg font-bold text-gray-800 mb-3">📈 Monthly Profit</h3>
+       <div class="space-y-3"><input type="month" id="profit-month" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"> <button id="profit-report-btn" class="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition active:scale-95"> Calculate </button>
+       </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-md p-4">
+       <h3 class="text-lg font-bold text-gray-800 mb-3">📋 Complete Report</h3>
+       <p class="text-sm text-gray-600 mb-3">All details in one report</p>
+       <div class="space-y-3"><input type="month" id="comprehensive-month" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"> <button id="comprehensive-report-btn" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition active:scale-95"> Generate </button>
+       </div>
+      </div>
+     </div><!-- Report Display -->
+     <div id="report-display" class="bg-white rounded-2xl shadow-md p-4 hidden">
+      <div class="flex justify-between items-center mb-4">
+       <h3 id="report-title" class="text-lg font-bold text-gray-800"></h3><button id="export-pdf-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-indigo-700 transition text-sm active:scale-95"> 📄 PDF </button>
+      </div>
+      <div id="report-content" class="overflow-x-auto"></div>
+     </div>
+    </div><!-- Settings Section -->
+    <div id="settings-section" class="tab-content hidden p-4 space-y-4">
+     <div class="bg-white rounded-2xl shadow-md p-4">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><span>⚙️</span> Settings</h2>
+      <div class="mb-6">
+       <h3 class="text-lg font-semibold text-gray-800 mb-3">🔐 Change Passcode</h3>
+       <form id="passcode-form" class="space-y-3">
+        <div><label for="current-passcode" class="block text-sm font-medium text-gray-700 mb-1">Current</label> <input type="password" id="current-passcode" required inputmode="numeric" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+        <div><label for="new-passcode" class="block text-sm font-medium text-gray-700 mb-1">New</label> <input type="password" id="new-passcode" required minlength="4" inputmode="numeric" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+        <div><label for="confirm-passcode" class="block text-sm font-medium text-gray-700 mb-1">Confirm</label> <input type="password" id="confirm-passcode" required minlength="4" inputmode="numeric" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div><button type="submit" id="passcode-submit-btn" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg active:scale-95"> Change Passcode </button>
+       </form>
+      </div>
+      <div class="border-t-2 border-gray-100 pt-4">
+       <h3 class="text-lg font-semibold text-gray-800 mb-2">ℹ️ About</h3>
+       <p class="text-sm text-gray-600 mb-2">Bayan Boutique Mobile Billing</p>
+       <p class="text-sm text-gray-600 mb-2">☁️ Firebase Real-time Sync</p>
+       <p class="text-sm text-gray-600">📱 Optimized for Mobile</p>
+      </div>
+     </div>
+    </div>
+   </div><!-- Bottom Navigation -->
+   <div class="bottom-nav fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-lg">
+    <div class="grid grid-cols-5 h-16"><button class="nav-btn flex flex-col items-center justify-center text-indigo-600 border-t-2 border-indigo-600" data-tab="billing"> <span class="text-xl">💰</span> <span class="text-xs font-medium mt-1">Bill</span> </button> <button class="nav-btn flex flex-col items-center justify-center text-gray-500" data-tab="receipts"> <span class="text-xl">📝</span> <span class="text-xs font-medium mt-1">Receipt</span> </button> <button class="nav-btn flex flex-col items-center justify-center text-gray-500" data-tab="expenses"> <span class="text-xl">💸</span> <span class="text-xs font-medium mt-1">Expense</span> </button> <button class="nav-btn flex flex-col items-center justify-center text-gray-500" data-tab="reports"> <span class="text-xl">📊</span> <span class="text-xs font-medium mt-1">Report</span> </button> <button class="nav-btn flex flex-col items-center justify-center text-gray-500" data-tab="settings"> <span class="text-xl">⚙️</span> <span class="text-xs font-medium mt-1">Settings</span> </button>
+    </div>
+   </div><!-- Toast Notification -->
+   <div id="toast" class="fixed top-20 left-4 right-4 bg-green-600 text-white px-4 py-3 rounded-xl shadow-lg hidden transition-all z-50 text-center"><span id="toast-message"></span>
+   </div>
+  </div>
+  <script>
+    // ============================================
+    // FIREBASE CONFIGURATION
+    // ============================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyARoru9_NB-VyJd-igQF7nCcSUnppdR7m0",
+      authDomain: "bayanbilling.firebaseapp.com",
+      databaseURL: "https://bayanbilling-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "bayanbilling",
+      storageBucket: "bayanbilling.firebasestorage.app",
+      messagingSenderId: "361558314512",
+      appId: "1:361558314512:web:d732900034f952d90b4495"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // ============================================
+    // STATE MANAGEMENT
+    // ============================================
+    let allData = [];
+    let currentReportData = null;
+    let currentReportType = '';
+    let isLoggedIn = false;
+    let currentPasscode = '1234';
+    let isSyncing = false;
+
+    // ============================================
+    // FIREBASE SYNC FUNCTIONS
+    // ============================================
+    function setupFirebaseListeners() {
+      // Listen for data changes
+      database.ref('records').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          allData = Object.keys(data).map(key => ({
+            ...data[key],
+            id: key
+          }));
+        } else {
+          allData = [];
+        }
+        
+        renderInvoices();
+        renderReceipts();
+        renderExpenses();
+        updateCustomerDropdown();
+        updateReceiptCustomerDropdown();
+        updateSyncStatus('synced');
+      });
+
+      // Listen for passcode changes
+      database.ref('settings/passcode').on('value', (snapshot) => {
+        const passcode = snapshot.val();
+        if (passcode) {
+          currentPasscode = passcode;
+        }
+      });
+    }
+
+    function updateSyncStatus(status) {
+      const syncStatus = document.getElementById('sync-status');
+      if (status === 'syncing') {
+        syncStatus.innerHTML = '<div class="spinner"></div><span>Syncing...</span>';
+      } else if (status === 'synced') {
+        syncStatus.innerHTML = '<span class="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span><span>Synced</span>';
+      } else if (status === 'error') {
+        syncStatus.innerHTML = '<span class="inline-block w-2 h-2 bg-red-400 rounded-full"></span><span>Error</span>';
+      }
+    }
+
+    async function saveToFirebase(record) {
+      updateSyncStatus('syncing');
+      try {
+        if (record.id && record.id.startsWith('temp_')) {
+          // New record
+          const newRef = database.ref('records').push();
+          const recordWithoutId = { ...record };
+          delete recordWithoutId.id;
+          await newRef.set(recordWithoutId);
+          updateSyncStatus('synced');
+          return true;
+        } else if (record.id) {
+          // Update existing
+          const recordWithoutId = { ...record };
+          delete recordWithoutId.id;
+          await database.ref(`records/${record.id}`).set(recordWithoutId);
+          updateSyncStatus('synced');
+          return true;
+        } else {
+          // No ID provided, create new
+          const newRef = database.ref('records').push();
+          await newRef.set(record);
+          updateSyncStatus('synced');
+          return true;
+        }
+      } catch (error) {
+        console.error('Firebase save error:', error);
+        updateSyncStatus('error');
+        showToast('Check Firebase config & connection', 'error');
+        return false;
+      }
+    }
+
+    async function deleteFromFirebase(id) {
+      updateSyncStatus('syncing');
+      try {
+        await database.ref(`records/${id}`).remove();
+        updateSyncStatus('synced');
+        return true;
+      } catch (error) {
+        console.error('Firebase delete error:', error);
+        updateSyncStatus('error');
+        showToast('Delete error. Check connection.', 'error');
+        return false;
+      }
+    }
+
+    async function savePasscodeToFirebase(passcode) {
+      try {
+        await database.ref('settings/passcode').set(passcode);
+        return true;
+      } catch (error) {
+        console.error('Passcode save error:', error);
+        return false;
+      }
+    }
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    function init() {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('invoice-date').value = today;
+      document.getElementById('receipt-date').value = today;
+      document.getElementById('expense-date').value = today;
+
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      document.getElementById('sales-month').value = currentMonth;
+      document.getElementById('expense-month').value = currentMonth;
+      document.getElementById('profit-month').value = currentMonth;
+      document.getElementById('comprehensive-month').value = currentMonth;
+
+      setupEventListeners();
+      setupFirebaseListeners();
+    }
+
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+    function setupEventListeners() {
+      // Login
+      document.getElementById('login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleLogin();
+      });
+
+      // Passcode change
+      document.getElementById('passcode-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        handlePasscodeChange();
+      });
+
+      // Dispatch toggle
+      document.getElementById('is-dispatched').addEventListener('change', (e) => {
+        const dispatchFields = document.getElementById('dispatch-fields');
+        if (e.target.checked) {
+          dispatchFields.classList.remove('hidden');
+          document.getElementById('dispatch-date').value = new Date().toISOString().split('T')[0];
+        } else {
+          dispatchFields.classList.add('hidden');
+          document.getElementById('dispatch-date').value = '';
+          document.getElementById('courier-service').value = '';
+          document.getElementById('barcode-number').value = '';
+        }
+      });
+
+      // Bottom navigation
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tab = btn.dataset.tab;
+          switchTab(tab);
+        });
+      });
+
+      // Forms
+      document.getElementById('invoice-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleInvoiceSubmit();
+      });
+
+      document.getElementById('receipt-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleReceiptSubmit();
+      });
+
+      document.getElementById('expense-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleExpenseSubmit();
+      });
+
+      // Customer/Invoice selection
+      document.getElementById('receipt-customer-select').addEventListener('change', (e) => {
+        updateInvoiceDropdown(e.target.value);
+      });
+
+      document.getElementById('receipt-invoice-select').addEventListener('change', (e) => {
+        const invoiceId = e.target.value;
+        if (invoiceId) {
+          const invoice = allData.find(d => d.id === invoiceId);
+          if (invoice) {
+            document.getElementById('receipt-amount').value = invoice.sale_amount;
+          }
+        }
+      });
+
+      // Report buttons
+      document.getElementById('sales-report-btn').addEventListener('click', generateSalesReport);
+      document.getElementById('expense-report-btn').addEventListener('click', generateExpensesReport);
+      document.getElementById('credit-report-btn').addEventListener('click', generateCreditReport);
+      document.getElementById('profit-report-btn').addEventListener('click', generateProfitReport);
+      document.getElementById('comprehensive-report-btn').addEventListener('click', generateComprehensiveReport);
+      document.getElementById('export-pdf-btn').addEventListener('click', exportToPDF);
+    }
+
+    // ============================================
+    // LOGIN & SECURITY
+    // ============================================
+    function handleLogin() {
+      const passcodeInput = document.getElementById('passcode-input');
+      const loginBtn = document.getElementById('login-btn');
+      const loginError = document.getElementById('login-error');
+      
+      loginBtn.disabled = true;
+      loginBtn.innerHTML = '<div class="spinner mx-auto"></div>';
+      loginError.classList.add('hidden');
+
+      const enteredPasscode = passcodeInput.value;
+
+      setTimeout(() => {
+        if (enteredPasscode === currentPasscode) {
+          isLoggedIn = true;
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('app').classList.remove('hidden');
+          showToast('Welcome back! 👋');
+        } else {
+          loginError.textContent = 'Incorrect passcode';
+          loginError.classList.remove('hidden');
+          passcodeInput.value = '';
+          passcodeInput.focus();
+        }
+
+        loginBtn.disabled = false;
+        loginBtn.textContent = '🔓 Unlock';
+      }, 500);
+    }
+
+    async function handlePasscodeChange() {
+      const currentPasscodeInput = document.getElementById('current-passcode');
+      const newPasscodeInput = document.getElementById('new-passcode');
+      const confirmPasscodeInput = document.getElementById('confirm-passcode');
+      const btn = document.getElementById('passcode-submit-btn');
+      
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner mx-auto"></div>';
+
+      const enteredCurrent = currentPasscodeInput.value;
+      const newPasscode = newPasscodeInput.value;
+      const confirmPasscode = confirmPasscodeInput.value;
+
+      if (enteredCurrent !== currentPasscode) {
+        showToast('Current passcode incorrect', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Change Passcode';
+        return;
+      }
+
+      if (newPasscode !== confirmPasscode) {
+        showToast('Passcodes do not match', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Change Passcode';
+        return;
+      }
+
+      if (newPasscode.length < 4) {
+        showToast('Min 4 characters required', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Change Passcode';
+        return;
+      }
+
+      const saved = await savePasscodeToFirebase(newPasscode);
+      if (saved) {
+        currentPasscode = newPasscode;
+        showToast('Passcode changed! ✅');
+        document.getElementById('passcode-form').reset();
+      } else {
+        showToast('Failed to save passcode', 'error');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Change Passcode';
+    }
+
+    // ============================================
+    // NAVIGATION
+    // ============================================
+    function switchTab(tab) {
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-indigo-600', 'border-t-2', 'border-indigo-600');
+        btn.classList.add('text-gray-500');
+      });
+      
+      const activeBtn = document.querySelector(`[data-tab="${tab}"]`);
+      activeBtn.classList.add('text-indigo-600', 'border-t-2', 'border-indigo-600');
+      activeBtn.classList.remove('text-gray-500');
+
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+      });
+      document.getElementById(`${tab}-section`).classList.remove('hidden');
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ============================================
+    // INVOICE FUNCTIONS
+    // ============================================
+    async function handleInvoiceSubmit() {
+      const form = document.getElementById('invoice-form');
+      const btn = document.getElementById('invoice-submit-btn');
+      const editingId = form.dataset.editingId;
+      
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner mx-auto"></div>';
+
+      const isDispatched = document.getElementById('is-dispatched').checked;
+      const invoiceData = {
+        id: editingId || `temp_${Date.now()}`,
+        type: 'invoice',
+        customer_name: document.getElementById('customer-name').value,
+        order_number: document.getElementById('order-number').value,
+        sale_type: document.getElementById('sale-type').value,
+        date: new Date(document.getElementById('invoice-date').value).toISOString(),
+        product_cost: parseFloat(document.getElementById('product-cost').value),
+        sale_amount: parseFloat(document.getElementById('sale-amount').value),
+        status: 'active',
+        is_dispatched: isDispatched,
+        dispatch_date: isDispatched && document.getElementById('dispatch-date').value ? new Date(document.getElementById('dispatch-date').value).toISOString() : '',
+        courier_service: isDispatched ? document.getElementById('courier-service').value : '',
+        barcode_number: isDispatched ? document.getElementById('barcode-number').value : ''
+      };
+
+      const saved = await saveToFirebase(invoiceData);
+      
+      if (saved) {
+        showToast(editingId ? 'Invoice updated! ✅' : 'Invoice created! ✅');
+        form.reset();
+        document.getElementById('invoice-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('dispatch-fields').classList.add('hidden');
+        form.dataset.editingId = '';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Create Invoice';
+    }
+
+    function renderInvoices() {
+      const invoices = allData.filter(d => d.type === 'invoice').sort((a, b) => new Date(b.date) - new Date(a.date));
+      const container = document.getElementById('invoice-list');
+      
+      if (invoices.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">No invoices yet</p>';
+        return;
+      }
+
+      container.innerHTML = invoices.slice(0, 20).map(inv => {
+        let dispatchBadge = '';
+        if (inv.is_dispatched) {
+          dispatchBadge = '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">📦 Dispatched</span>';
+        }
+        
+        return `
+          <div class="border-2 border-gray-200 rounded-xl p-3 ${inv.status === 'cancelled' ? 'bg-red-50 opacity-75' : 'bg-white'}">
+            <div class="flex justify-between items-start mb-2">
+              <div class="flex-1">
+                <p class="font-semibold text-gray-800">${inv.customer_name}</p>
+                <p class="text-xs text-gray-600">Order #${inv.order_number}</p>
+              </div>
+              <div class="flex flex-col items-end gap-1">
+                <span class="px-2 py-1 rounded-full text-xs font-semibold ${inv.sale_type === 'cash' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                  ${inv.sale_type === 'cash' ? 'Cash' : 'Credit'}
+                </span>
+                ${dispatchBadge}
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs mb-2">
+              <div>
+                <p class="text-gray-600">Sale: <span class="font-semibold">₹${inv.sale_amount.toFixed(2)}</span></p>
+                <p class="text-gray-600">Cost: <span class="font-semibold">₹${inv.product_cost.toFixed(2)}</span></p>
+              </div>
+              <div class="text-right">
+                <p class="text-gray-600">Profit: <span class="font-semibold text-green-600">₹${(inv.sale_amount - inv.product_cost).toFixed(2)}</span></p>
+                <p class="text-gray-600">${new Date(inv.date).toLocaleDateString()}</p>
+              </div>
+            </div>
+            ${inv.status !== 'cancelled' ? `
+              <div class="flex gap-2">
+                <button onclick="editInvoice('${inv.id}')" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-xs font-semibold active:scale-95">
+                  ✏️ Edit
+                </button>
+                <button onclick="cancelInvoice('${inv.id}')" class="flex-1 bg-red-50 text-red-600 py-2 rounded-lg text-xs font-semibold active:scale-95">
+                  ❌ Cancel
+                </button>
+              </div>
+            ` : '<p class="text-center text-red-600 text-xs font-semibold">CANCELLED</p>'}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function editInvoice(id) {
+      const invoice = allData.find(d => d.id === id);
+      if (!invoice) return;
+
+      document.getElementById('customer-name').value = invoice.customer_name;
+      document.getElementById('order-number').value = invoice.order_number;
+      document.getElementById('sale-type').value = invoice.sale_type;
+      document.getElementById('invoice-date').value = new Date(invoice.date).toISOString().split('T')[0];
+      document.getElementById('product-cost').value = invoice.product_cost;
+      document.getElementById('sale-amount').value = invoice.sale_amount;
+      
+      const isDispatchedCheckbox = document.getElementById('is-dispatched');
+      isDispatchedCheckbox.checked = invoice.is_dispatched || false;
+      
+      if (invoice.is_dispatched) {
+        document.getElementById('dispatch-fields').classList.remove('hidden');
+        if (invoice.dispatch_date) {
+          document.getElementById('dispatch-date').value = new Date(invoice.dispatch_date).toISOString().split('T')[0];
+        }
+        document.getElementById('courier-service').value = invoice.courier_service || '';
+        document.getElementById('barcode-number').value = invoice.barcode_number || '';
+      }
+
+      const form = document.getElementById('invoice-form');
+      const submitBtn = document.getElementById('invoice-submit-btn');
+      
+      submitBtn.textContent = 'Update Invoice';
+      form.dataset.editingId = id;
+      
+      switchTab('billing');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelInvoice(id) {
+      const invoice = allData.find(d => d.id === id);
+      if (!invoice) return;
+
+      const confirmDiv = document.createElement('div');
+      confirmDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+      confirmDiv.innerHTML = `
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">Cancel Invoice?</h3>
+          <p class="text-gray-600 mb-6">Cancel invoice for ${invoice.customer_name} (Order #${invoice.order_number})?</p>
+          <div class="flex gap-3">
+            <button id="confirm-cancel-btn" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-semibold active:scale-95">
+              Yes, Cancel
+            </button>
+            <button id="cancel-cancel-btn" class="flex-1 bg-gray-300 text-gray-800 py-3 rounded-xl font-semibold active:scale-95">
+              No
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(confirmDiv);
+
+      document.getElementById('confirm-cancel-btn').onclick = async () => {
+        invoice.status = 'cancelled';
+        await saveToFirebase(invoice);
+        showToast('Invoice cancelled');
+        confirmDiv.remove();
+      };
+
+      document.getElementById('cancel-cancel-btn').onclick = () => {
+        confirmDiv.remove();
+      };
+    }
+
+    // ============================================
+    // RECEIPT FUNCTIONS
+    // ============================================
+    async function handleReceiptSubmit() {
+      const form = document.getElementById('receipt-form');
+      const btn = document.getElementById('receipt-submit-btn');
+      const editingId = form.dataset.editingId;
+      
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner mx-auto"></div>';
+
+      const receipt = {
+        id: editingId || `temp_${Date.now()}`,
+        type: 'receipt',
+        customer_name: document.getElementById('receipt-customer-select').value,
+        payment_date: new Date(document.getElementById('receipt-date').value).toISOString(),
+        amount: parseFloat(document.getElementById('receipt-amount').value),
+        description: document.getElementById('receipt-description').value,
+        linked_invoice_id: document.getElementById('receipt-invoice-select').value || null
+      };
+
+      const saved = await saveToFirebase(receipt);
+      
+      if (saved) {
+        showToast(editingId ? 'Receipt updated! ✅' : 'Receipt recorded! ✅');
+        form.reset();
+        document.getElementById('receipt-date').value = new Date().toISOString().split('T')[0];
+        form.dataset.editingId = '';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Record Receipt';
+    }
+
+    function renderReceipts() {
+      const receipts = allData.filter(d => d.type === 'receipt').sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
+      const container = document.getElementById('receipt-list');
+      
+      if (receipts.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">No receipts yet</p>';
+        return;
+      }
+
+      container.innerHTML = receipts.slice(0, 10).map(rec => `
+        <div class="border-2 border-gray-200 rounded-xl p-3 bg-white">
+          <div class="flex justify-between items-start mb-2">
+            <div class="flex-1">
+              <p class="font-semibold text-gray-800">${rec.customer_name}</p>
+              <p class="text-xs text-gray-600">${rec.description || 'Payment received'}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-lg font-bold text-green-600">₹${rec.amount.toFixed(2)}</p>
+              <p class="text-xs text-gray-600">${new Date(rec.payment_date).toLocaleDateString()}</p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="editReceipt('${rec.id}')" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-xs font-semibold active:scale-95">
+              ✏️ Edit
+            </button>
+            <button onclick="deleteReceipt('${rec.id}')" class="flex-1 bg-red-50 text-red-600 py-2 rounded-lg text-xs font-semibold active:scale-95">
+              🗑️ Delete
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function editReceipt(id) {
+      const receipt = allData.find(d => d.id === id);
+      if (!receipt) return;
+
+      document.getElementById('receipt-customer-select').value = receipt.customer_name;
+      updateInvoiceDropdown(receipt.customer_name);
+      
+      setTimeout(() => {
+        if (receipt.linked_invoice_id) {
+          document.getElementById('receipt-invoice-select').value = receipt.linked_invoice_id;
+        }
+      }, 100);
+
+      document.getElementById('receipt-date').value = new Date(receipt.payment_date).toISOString().split('T')[0];
+      document.getElementById('receipt-amount').value = receipt.amount;
+      document.getElementById('receipt-description').value = receipt.description || '';
+
+      const form = document.getElementById('receipt-form');
+      const submitBtn = document.getElementById('receipt-submit-btn');
+      
+      submitBtn.textContent = 'Update Receipt';
+      form.dataset.editingId = id;
+      
+      switchTab('receipts');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function deleteReceipt(id) {
+      const receipt = allData.find(d => d.id === id);
+      if (!receipt) return;
+
+      const confirmDiv = document.createElement('div');
+      confirmDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+      confirmDiv.innerHTML = `
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">Delete Receipt?</h3>
+          <p class="text-gray-600 mb-6">Delete receipt for ${receipt.customer_name} (₹${receipt.amount.toFixed(2)})?</p>
+          <div class="flex gap-3">
+            <button id="confirm-delete-btn" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-semibold active:scale-95">
+              Yes, Delete
+            </button>
+            <button id="cancel-delete-btn" class="flex-1 bg-gray-300 text-gray-800 py-3 rounded-xl font-semibold active:scale-95">
+              Cancel
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(confirmDiv);
+
+      document.getElementById('confirm-delete-btn').onclick = async () => {
+        await deleteFromFirebase(id);
+        showToast('Receipt deleted');
+        confirmDiv.remove();
+      };
+
+      document.getElementById('cancel-delete-btn').onclick = () => {
+        confirmDiv.remove();
+      };
+    }
+
+    // ============================================
+    // EXPENSE FUNCTIONS
+    // ============================================
+    async function handleExpenseSubmit() {
+      const form = document.getElementById('expense-form');
+      const btn = document.getElementById('expense-submit-btn');
+      const editingId = form.dataset.editingId;
+      
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner mx-auto"></div>';
+
+      const expense = {
+        id: editingId || `temp_${Date.now()}`,
+        type: 'expense',
+        expense_type: document.getElementById('expense-type').value,
+        date: new Date(document.getElementById('expense-date').value).toISOString(),
+        amount: parseFloat(document.getElementById('expense-amount').value),
+        description: document.getElementById('expense-description').value
+      };
+
+      const saved = await saveToFirebase(expense);
+      
+      if (saved) {
+        showToast(editingId ? 'Expense updated! ✅' : 'Expense recorded! ✅');
+        form.reset();
+        document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+        form.dataset.editingId = '';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Record Expense';
+    }
+
+    function renderExpenses() {
+      const expenses = allData.filter(d => d.type === 'expense').sort((a, b) => new Date(b.date) - new Date(a.date));
+      const container = document.getElementById('expense-list');
+      
+      if (expenses.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">No expenses yet</p>';
+        return;
+      }
+
+      container.innerHTML = expenses.slice(0, 10).map(exp => `
+        <div class="border-2 border-gray-200 rounded-xl p-3 bg-white">
+          <div class="flex justify-between items-start mb-2">
+            <div class="flex-1">
+              <p class="font-semibold text-gray-800">${exp.expense_type}</p>
+              <p class="text-xs text-gray-600">${exp.description || 'No description'}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-lg font-bold text-red-600">₹${exp.amount.toFixed(2)}</p>
+              <p class="text-xs text-gray-600">${new Date(exp.date).toLocaleDateString()}</p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="editExpense('${exp.id}')" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-xs font-semibold active:scale-95">
+              ✏️ Edit
+            </button>
+            <button onclick="deleteExpense('${exp.id}')" class="flex-1 bg-red-50 text-red-600 py-2 rounded-lg text-xs font-semibold active:scale-95">
+              🗑️ Delete
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function editExpense(id) {
+      const expense = allData.find(d => d.id === id);
+      if (!expense) return;
+
+      document.getElementById('expense-type').value = expense.expense_type;
+      document.getElementById('expense-date').value = new Date(expense.date).toISOString().split('T')[0];
+      document.getElementById('expense-amount').value = expense.amount;
+      document.getElementById('expense-description').value = expense.description || '';
+
+      const form = document.getElementById('expense-form');
+      const submitBtn = document.getElementById('expense-submit-btn');
+      
+      submitBtn.textContent = 'Update Expense';
+      form.dataset.editingId = id;
+      
+      switchTab('expenses');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function deleteExpense(id) {
+      const expense = allData.find(d => d.id === id);
+      if (!expense) return;
+
+      const confirmDiv = document.createElement('div');
+      confirmDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+      confirmDiv.innerHTML = `
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">Delete Expense?</h3>
+          <p class="text-gray-600 mb-6">Delete expense: ${expense.expense_type} (₹${expense.amount.toFixed(2)})?</p>
+          <div class="flex gap-3">
+            <button id="confirm-delete-expense-btn" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-semibold active:scale-95">
+              Yes, Delete
+            </button>
+            <button id="cancel-delete-expense-btn" class="flex-1 bg-gray-300 text-gray-800 py-3 rounded-xl font-semibold active:scale-95">
+              Cancel
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(confirmDiv);
+
+      document.getElementById('confirm-delete-expense-btn').onclick = async () => {
+        await deleteFromFirebase(id);
+        showToast('Expense deleted');
+        confirmDiv.remove();
+      };
+
+      document.getElementById('cancel-delete-expense-btn').onclick = () => {
+        confirmDiv.remove();
+      };
+    }
+
+    // ============================================
+    // DROPDOWN UPDATES
+    // ============================================
+    function updateCustomerDropdown() {
+      const customers = [...new Set(allData.filter(d => d.type === 'invoice' && d.sale_type === 'credit').map(d => d.customer_name))];
+      const select = document.getElementById('customer-select');
+      select.innerHTML = '<option value="">-- Select Customer --</option>' + 
+        customers.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function updateReceiptCustomerDropdown() {
+      const customers = [...new Set(allData.filter(d => d.type === 'invoice' && d.sale_type === 'credit' && d.status !== 'cancelled').map(d => d.customer_name))];
+      const select = document.getElementById('receipt-customer-select');
+      const currentValue = select.value;
+      select.innerHTML = '<option value="">-- Select Customer --</option>' + 
+        customers.map(c => `<option value="${c}">${c}</option>`).join('');
+      if (currentValue && customers.includes(currentValue)) {
+        select.value = currentValue;
+      }
+    }
+
+    function updateInvoiceDropdown(customerName) {
+      const invoices = allData.filter(d => 
+        d.type === 'invoice' && 
+        d.customer_name === customerName && 
+        d.sale_type === 'credit' &&
+        d.status !== 'cancelled'
+      ).sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      const select = document.getElementById('receipt-invoice-select');
+      select.innerHTML = '<option value="">-- Select Invoice --</option>' + 
+        invoices.map(inv => {
+          const receipts = allData.filter(r => r.type === 'receipt' && r.linked_invoice_id === inv.id);
+          const totalPaid = receipts.reduce((sum, r) => sum + r.amount, 0);
+          const balance = inv.sale_amount - totalPaid;
+          return `<option value="${inv.id}">Order #${inv.order_number} - ₹${inv.sale_amount.toFixed(2)} (Bal: ₹${balance.toFixed(2)})</option>`;
+        }).join('');
+    }
+
+    // ============================================
+    // REPORTS
+    // ============================================
+    function generateSalesReport() {
+      const month = document.getElementById('sales-month').value;
+      if (!month) {
+        showToast('Please select a month', 'error');
+        return;
+      }
+
+      const [year, monthNum] = month.split('-');
+      const sales = allData.filter(d => {
+        if (d.type !== 'invoice' || d.status === 'cancelled') return false;
+        const date = new Date(d.date);
+        return date.getFullYear() === parseInt(year) && date.getMonth() + 1 === parseInt(monthNum);
+      });
+
+      const totalCash = sales.filter(s => s.sale_type === 'cash').reduce((sum, s) => sum + s.sale_amount, 0);
+      const totalCredit = sales.filter(s => s.sale_type === 'credit').reduce((sum, s) => sum + s.sale_amount, 0);
+      const totalSales = totalCash + totalCredit;
+
+      currentReportData = {
+        title: `Sales - ${new Date(month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+        summary: [
+          { label: 'Cash Sales', value: `₹${totalCash.toFixed(2)}` },
+          { label: 'Credit Sales', value: `₹${totalCredit.toFixed(2)}` },
+          { label: 'Total Sales', value: `₹${totalSales.toFixed(2)}` }
+        ],
+        items: sales.map(s => ({
+          date: new Date(s.date).toLocaleDateString(),
+          customer: s.customer_name,
+          order: s.order_number,
+          type: s.sale_type,
+          amount: s.sale_amount
+        }))
+      };
+      currentReportType = 'sales';
+      displayReport();
+    }
+
+    function generateExpensesReport() {
+      const month = document.getElementById('expense-month').value;
+      if (!month) {
+        showToast('Please select a month', 'error');
+        return;
+      }
+
+      const [year, monthNum] = month.split('-');
+      const expenses = allData.filter(d => {
+        if (d.type !== 'expense') return false;
+        const date = new Date(d.date);
+        return date.getFullYear() === parseInt(year) && date.getMonth() + 1 === parseInt(monthNum);
+      });
+
+      const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+      currentReportData = {
+        title: `Expenses - ${new Date(month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+        summary: [
+          { label: 'Total Expenses', value: `₹${totalExpenses.toFixed(2)}` }
+        ],
+        items: expenses.map(e => ({
+          date: new Date(e.date).toLocaleDateString(),
+          type: e.expense_type,
+          description: e.description || '-',
+          amount: e.amount
+        }))
+      };
+      currentReportType = 'expenses';
+      displayReport();
+    }
+
+    function generateCreditReport() {
+      const customer = document.getElementById('customer-select').value;
+      if (!customer) {
+        showToast('Please select a customer', 'error');
+        return;
+      }
+
+      const creditSales = allData.filter(d => d.type === 'invoice' && d.sale_type === 'credit' && d.customer_name === customer && d.status !== 'cancelled');
+      const receipts = allData.filter(d => d.type === 'receipt' && d.customer_name === customer);
+
+      const totalCredit = creditSales.reduce((sum, s) => sum + s.sale_amount, 0);
+      const totalPaid = receipts.reduce((sum, r) => sum + r.amount, 0);
+      const balance = totalCredit - totalPaid;
+
+      currentReportData = {
+        title: `Credit - ${customer}`,
+        summary: [
+          { label: 'Total Credit', value: `₹${totalCredit.toFixed(2)}` },
+          { label: 'Total Paid', value: `₹${totalPaid.toFixed(2)}` },
+          { label: 'Balance', value: `₹${balance.toFixed(2)}` }
+        ],
+        items: creditSales.map(s => ({
+          date: new Date(s.date).toLocaleDateString(),
+          order: s.order_number,
+          amount: s.sale_amount
+        }))
+      };
+      currentReportType = 'credit';
+      displayReport();
+    }
+
+    function generateProfitReport() {
+      const month = document.getElementById('profit-month').value;
+      if (!month) {
+        showToast('Please select a month', 'error');
+        return;
+      }
+
+      const [year, monthNum] = month.split('-');
+      const sales = allData.filter(d => {
+        if (d.type !== 'invoice' || d.status === 'cancelled') return false;
+        const date = new Date(d.date);
+        return date.getFullYear() === parseInt(year) && date.getMonth() + 1 === parseInt(monthNum);
+      });
+
+      const totalSales = sales.reduce((sum, s) => sum + s.sale_amount, 0);
+      const totalCost = sales.reduce((sum, s) => sum + s.product_cost, 0);
+      const profit = totalSales - totalCost;
+
+      currentReportData = {
+        title: `Profit - ${new Date(month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+        summary: [
+          { label: 'Total Sales', value: `₹${totalSales.toFixed(2)}` },
+          { label: 'Total Cost', value: `₹${totalCost.toFixed(2)}` },
+          { label: 'Profit', value: `₹${profit.toFixed(2)}` }
+        ],
+        items: sales.map(s => ({
+          date: new Date(s.date).toLocaleDateString(),
+          customer: s.customer_name,
+          order: s.order_number,
+          sales: s.sale_amount,
+          cost: s.product_cost,
+          profit: s.sale_amount - s.product_cost
+        }))
+      };
+      currentReportType = 'profit';
+      displayReport();
+    }
+
+    function generateComprehensiveReport() {
+      const month = document.getElementById('comprehensive-month').value;
+      if (!month) {
+        showToast('Please select a month', 'error');
+        return;
+      }
+
+      const [year, monthNum] = month.split('-');
+      
+      const sales = allData.filter(d => {
+        if (d.type !== 'invoice' || d.status === 'cancelled') return false;
+        const date = new Date(d.date);
+        return date.getFullYear() === parseInt(year) && date.getMonth() + 1 === parseInt(monthNum);
+      });
+
+      const expenses = allData.filter(d => {
+        if (d.type !== 'expense') return false;
+        const date = new Date(d.date);
+        return date.getFullYear() === parseInt(year) && date.getMonth() + 1 === parseInt(monthNum);
+      });
+
+      const receipts = allData.filter(d => {
+        if (d.type !== 'receipt') return false;
+        const date = new Date(d.payment_date);
+        return date.getFullYear() === parseInt(year) && date.getMonth() + 1 === parseInt(monthNum);
+      });
+
+      const totalCash = sales.filter(s => s.sale_type === 'cash').reduce((sum, s) => sum + s.sale_amount, 0);
+      const totalCredit = sales.filter(s => s.sale_type === 'credit').reduce((sum, s) => sum + s.sale_amount, 0);
+      const totalSales = totalCash + totalCredit;
+      const totalCost = sales.reduce((sum, s) => sum + s.product_cost, 0);
+      const grossProfit = totalSales - totalCost;
+      const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+      const netProfit = grossProfit - totalExpenses;
+      const totalReceipts = receipts.reduce((sum, r) => sum + r.amount, 0);
+
+      currentReportData = {
+        title: `Complete Report - ${new Date(month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+        summary: [
+          { label: 'Total Sales', value: `₹${totalSales.toFixed(2)}`, breakdown: `Cash: ₹${totalCash.toFixed(2)} | Credit: ₹${totalCredit.toFixed(2)}` },
+          { label: 'Product Cost', value: `₹${totalCost.toFixed(2)}` },
+          { label: 'Gross Profit', value: `₹${grossProfit.toFixed(2)}` },
+          { label: 'Expenses', value: `₹${totalExpenses.toFixed(2)}` },
+          { label: 'Net Profit', value: `₹${netProfit.toFixed(2)}` },
+          { label: 'Receipts', value: `₹${totalReceipts.toFixed(2)}` }
+        ],
+        sections: {
+          sales: sales.map(s => ({
+            date: new Date(s.date).toLocaleDateString(),
+            customer: s.customer_name,
+            order: s.order_number,
+            type: s.sale_type,
+            sales: s.sale_amount,
+            cost: s.product_cost,
+            profit: s.sale_amount - s.product_cost
+          })),
+          expenses: expenses.map(e => ({
+            date: new Date(e.date).toLocaleDateString(),
+            type: e.expense_type,
+            description: e.description || '-',
+            amount: e.amount
+          })),
+          receipts: receipts.map(r => ({
+            date: new Date(r.payment_date).toLocaleDateString(),
+            customer: r.customer_name,
+            description: r.description || '-',
+            amount: r.amount
+          }))
+        }
+      };
+      currentReportType = 'comprehensive';
+      displayReport();
+    }
+
+    function displayReport() {
+      const reportDisplay = document.getElementById('report-display');
+      const reportTitle = document.getElementById('report-title');
+      const reportContent = document.getElementById('report-content');
+
+      reportTitle.textContent = currentReportData.title;
+
+      let html = '<div class="mb-4 space-y-3">';
+      currentReportData.summary.forEach(item => {
+        html += `
+          <div class="bg-indigo-50 rounded-xl p-3">
+            <p class="text-xs text-gray-600 mb-1">${item.label}</p>
+            <p class="text-xl font-bold text-indigo-900">${item.value}</p>
+            ${item.breakdown ? `<p class="text-xs text-gray-500 mt-1">${item.breakdown}</p>` : ''}
+          </div>
+        `;
+      });
+      html += '</div>';
+
+      if (currentReportType === 'sales') {
+        html += '<div class="overflow-x-auto"><div class="swipe-indicator h-1 mb-2"></div><table class="w-full text-xs"><thead class="bg-gray-50"><tr><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Customer</th><th class="px-2 py-2 text-left">Order</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>';
+        currentReportData.items.forEach(item => {
+          html += `<tr class="border-t"><td class="px-2 py-2">${item.date}</td><td class="px-2 py-2">${item.customer}</td><td class="px-2 py-2">${item.order}</td><td class="px-2 py-2 text-right">₹${item.amount.toFixed(2)}</td></tr>`;
+        });
+        html += '</tbody></table></div>';
+      } else if (currentReportType === 'expenses') {
+        html += '<div class="overflow-x-auto"><div class="swipe-indicator h-1 mb-2"></div><table class="w-full text-xs"><thead class="bg-gray-50"><tr><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Type</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>';
+        currentReportData.items.forEach(item => {
+          html += `<tr class="border-t"><td class="px-2 py-2">${item.date}</td><td class="px-2 py-2">${item.type}</td><td class="px-2 py-2 text-right">₹${item.amount.toFixed(2)}</td></tr>`;
+        });
+        html += '</tbody></table></div>';
+      } else if (currentReportType === 'credit') {
+        html += '<div class="overflow-x-auto"><div class="swipe-indicator h-1 mb-2"></div><table class="w-full text-xs"><thead class="bg-gray-50"><tr><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Order</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>';
+        currentReportData.items.forEach(item => {
+          html += `<tr class="border-t"><td class="px-2 py-2">${item.date}</td><td class="px-2 py-2">${item.order}</td><td class="px-2 py-2 text-right">₹${item.amount.toFixed(2)}</td></tr>`;
+        });
+        html += '</tbody></table></div>';
+      } else if (currentReportType === 'profit') {
+        html += '<div class="overflow-x-auto"><div class="swipe-indicator h-1 mb-2"></div><table class="w-full text-xs"><thead class="bg-gray-50"><tr><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Customer</th><th class="px-2 py-2 text-right">Sales</th><th class="px-2 py-2 text-right">Profit</th></tr></thead><tbody>';
+        currentReportData.items.forEach(item => {
+          html += `<tr class="border-t"><td class="px-2 py-2">${item.date}</td><td class="px-2 py-2">${item.customer}</td><td class="px-2 py-2 text-right">₹${item.sales.toFixed(2)}</td><td class="px-2 py-2 text-right text-green-600">₹${item.profit.toFixed(2)}</td></tr>`;
+        });
+        html += '</tbody></table></div>';
+      } else if (currentReportType === 'comprehensive') {
+        html += '<div class="space-y-4">';
+        html += '<div><h4 class="font-bold mb-2 text-sm">💰 Sales</h4><div class="overflow-x-auto"><table class="w-full text-xs"><thead class="bg-gray-50"><tr><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Customer</th><th class="px-2 py-2 text-right">Sales</th><th class="px-2 py-2 text-right">Profit</th></tr></thead><tbody>';
+        currentReportData.sections.sales.forEach(item => {
+          html += `<tr class="border-t"><td class="px-2 py-2">${item.date}</td><td class="px-2 py-2">${item.customer}</td><td class="px-2 py-2 text-right">₹${item.sales.toFixed(2)}</td><td class="px-2 py-2 text-right text-green-600">₹${item.profit.toFixed(2)}</td></tr>`;
+        });
+        html += '</tbody></table></div></div>';
+        
+        html += '<div><h4 class="font-bold mb-2 text-sm">💸 Expenses</h4><div class="overflow-x-auto"><table class="w-full text-xs"><thead class="bg-gray-50"><tr><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Type</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>';
+        if (currentReportData.sections.expenses.length > 0) {
+          currentReportData.sections.expenses.forEach(item => {
+            html += `<tr class="border-t"><td class="px-2 py-2">${item.date}</td><td class="px-2 py-2">${item.type}</td><td class="px-2 py-2 text-right">₹${item.amount.toFixed(2)}</td></tr>`;
+          });
+        } else {
+          html += '<tr><td colspan="3" class="px-2 py-4 text-center text-gray-500">No expenses</td></tr>';
+        }
+        html += '</tbody></table></div></div>';
+        
+        html += '<div><h4 class="font-bold mb-2 text-sm">📝 Receipts</h4><div class="overflow-x-auto"><table class="w-full text-xs"><thead class="bg-gray-50"><tr><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Customer</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>';
+        if (currentReportData.sections.receipts.length > 0) {
+          currentReportData.sections.receipts.forEach(item => {
+            html += `<tr class="border-t"><td class="px-2 py-2">${item.date}</td><td class="px-2 py-2">${item.customer}</td><td class="px-2 py-2 text-right">₹${item.amount.toFixed(2)}</td></tr>`;
+          });
+        } else {
+          html += '<tr><td colspan="3" class="px-2 py-4 text-center text-gray-500">No receipts</td></tr>';
+        }
+        html += '</tbody></table></div></div>';
+        html += '</div>';
+      }
+
+      reportContent.innerHTML = html;
+      reportDisplay.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function exportToPDF() {
+      if (!currentReportData) return;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Bayan Boutique', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Kakkad, Kannur 670005', 105, 27, { align: 'center' });
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(currentReportData.title, 105, 40, { align: 'center' });
+
+      let yPos = 50;
+      doc.setFontSize(11);
+      currentReportData.summary.forEach(item => {
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${item.label}:`, 20, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.text(item.value, 120, yPos);
+        yPos += 7;
+      });
+
+      yPos += 5;
+
+      if (currentReportType === 'sales') {
+        doc.autoTable({
+          startY: yPos,
+          head: [['Date', 'Customer', 'Order', 'Type', 'Amount']],
+          body: currentReportData.items.map(item => [
+            item.date,
+            item.customer,
+            item.order,
+            item.type,
+            `₹${item.amount.toFixed(2)}`
+          ]),
+          theme: 'grid',
+          styles: { fontSize: 9 }
+        });
+      } else if (currentReportType === 'expenses') {
+        doc.autoTable({
+          startY: yPos,
+          head: [['Date', 'Type', 'Description', 'Amount']],
+          body: currentReportData.items.map(item => [
+            item.date,
+            item.type,
+            item.description,
+            `₹${item.amount.toFixed(2)}`
+          ]),
+          theme: 'grid',
+          styles: { fontSize: 9 }
+        });
+      } else if (currentReportType === 'credit') {
+        doc.autoTable({
+          startY: yPos,
+          head: [['Date', 'Order', 'Amount']],
+          body: currentReportData.items.map(item => [
+            item.date,
+            item.order,
+            `₹${item.amount.toFixed(2)}`
+          ]),
+          theme: 'grid',
+          styles: { fontSize: 9 }
+        });
+      } else if (currentReportType === 'profit') {
+        doc.autoTable({
+          startY: yPos,
+          head: [['Date', 'Customer', 'Order', 'Sales', 'Cost', 'Profit']],
+          body: currentReportData.items.map(item => [
+            item.date,
+            item.customer,
+            item.order,
+            `₹${item.sales.toFixed(2)}`,
+            `₹${item.cost.toFixed(2)}`,
+            `₹${item.profit.toFixed(2)}`
+          ]),
+          theme: 'grid',
+          styles: { fontSize: 8 }
+        });
+      }
+
+      doc.save(`${currentReportData.title.replace(/\s+/g, '_')}.pdf`);
+      showToast('PDF exported! 📄');
+    }
+
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toast-message');
+      
+      toastMessage.textContent = message;
+      toast.className = `fixed top-20 left-4 right-4 px-4 py-3 rounded-xl shadow-lg transition-all z-50 text-center ${
+        type === 'error' ? 'bg-red-600' : 'bg-green-600'
+      } text-white`;
+      
+      toast.classList.remove('hidden');
+      
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
+
+    // ============================================
+    // START APP
+    // ============================================
+    init();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b00b5a371807f8b',t:'MTc2NjA4MjM5Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
